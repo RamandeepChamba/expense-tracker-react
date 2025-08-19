@@ -10,6 +10,7 @@ const StyledModal = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 10;
 `;
 
 function Modal({ children }) {

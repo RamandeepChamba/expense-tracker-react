@@ -1,5 +1,5 @@
 import styled, { css } from "styled-components";
-import { useTransactions } from "./App";
+import { useMyState } from "./App";
 import { respond } from "./styles/mixins";
 
 const Container = styled.div`
@@ -18,7 +18,8 @@ const Container = styled.div`
 `;
 
 function Stats() {
-  const { transactions } = useTransactions();
+  const { state } = useMyState();
+  const { transactions } = state;
   const totalIncome = transactions.reduce((acc, curr) => {
     return acc + (curr.amount > 0 ? curr.amount : 0);
   }, 0);

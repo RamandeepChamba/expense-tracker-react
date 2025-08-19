@@ -1,7 +1,7 @@
 import styled, { css } from "styled-components";
 import { Button } from "./ui/Button";
 import { useEffect, useState } from "react";
-import { useTransactions } from "./App";
+import { useMyState } from "./App";
 import { v4 as uuidv4 } from "uuid";
 import { respond } from "./styles/mixins";
 
@@ -54,17 +54,28 @@ const Container = styled.div`
 const categoriesForIncome = ["Salary", "Savings"];
 const categoriesForExpense = ["Gas", "Food", "Transportation"];
 
+// If there is transactionToUpdate, we are updating
 function Form({ onClose }) {
-  const [date, setDate] = useState("");
-  const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState(0);
-  const [type, setType] = useState("income");
-  const [category, setCategory] = useState(categoriesForIncome[0]);
+  const { state, dispatch } = useMyState();
+  const { typeToAdd, transactionToUpdate } = state;
+  const [date, setDate] = useState(transactionToUpdate?.date ?? "");
+  const [description, setDescription] = useState(
+    transactionToUpdate?.description ?? ""
+  );
+  const [amount, setAmount] = useState(
+    transactionToUpdate ? Math.abs(transactionToUpdate.amount) : 0
+  );
+  const [category, setCategory] = useState(
+    transactionToUpdate?.category ?? categoriesForIncome[0]
+  );
+  const type = transactionToUpdate?.type ?? typeToAdd;
+  const isUpdating = Boolean(transactionToUpdate);
+  console.log(transactionToUpdate);
 
-  const { dispatch } = useTransactions();
-
+  // Only when adding
   useEffect(
     function () {
+      if (isUpdating) return;
       if (type === "income") {
         setCategory(categoriesForIncome[0]);
       }
@@ -72,26 +83,33 @@ function Form({ onClose }) {
         setCategory(categoriesForExpense[0]);
       }
     },
-    [type]
+    [type, isUpdating]
   );
 
   function handleSubmit(e) {
     e.preventDefault();
     const transaction = {
-      id: uuidv4(),
       type,
       date,
       description,
       amount: type === "income" ? amount : amount * -1,
       category,
     };
+    if (isUpdating) {
+      transaction.id = transactionToUpdate.id;
+      dispatch({ type: "updateTransaction", payload: transaction });
+    } else {
+      transaction.id = uuidv4();
+      dispatch({ type: "addTransaction", payload: transaction });
+    }
     console.log(transaction);
-    dispatch({ type: "addTransaction", payload: transaction });
-    onClose();
   }
   return (
     <Container>
-      <h1 className="heading">Add Transaction</h1>
+      <h1 className="heading">
+        {isUpdating ? "Update" : "Add"}{" "}
+        {type === "income" ? "Income" : "Expense"}
+      </h1>
       <form onSubmit={handleSubmit}>
         <div className="field">
           <label htmlFor="date">Date</label>
@@ -127,7 +145,7 @@ function Form({ onClose }) {
             onChange={(e) => setAmount(parseInt(e.target.value))}
           />
         </div>
-        <div className="field">
+        {/* <div className="field">
           <label htmlFor="type">Type</label>
           <select
             name="type"
@@ -138,7 +156,7 @@ function Form({ onClose }) {
             <option value="income">Income</option>
             <option value="expense">Expense</option>
           </select>
-        </div>
+        </div> */}
         <div className="field">
           <label htmlFor="category">Category</label>
           <select
@@ -161,7 +179,7 @@ function Form({ onClose }) {
               ))}
           </select>
         </div>
-        <Button variation="success">Add</Button>
+        <Button variation="success">{isUpdating ? "Update" : "Add"}</Button>
         <Button variation="light" type="button" onClick={onClose}>
           Cancel
         </Button>

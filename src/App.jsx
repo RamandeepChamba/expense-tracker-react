@@ -4,22 +4,83 @@ import List from "./List";
 import Modal from "./Modal";
 import Stats from "./Stats";
 import GlobalStyles from "./styles/GlobalStyles";
-import { createContext, useContext, useReducer, useState } from "react";
+import { createContext, useContext, useReducer } from "react";
 import { Button } from "./ui/Button";
 import { respond } from "./styles/mixins";
 
 const TransactionsContext = createContext();
 
+const initState = {
+  transactions: [],
+  showForm: false,
+  typeToAdd: "",
+  transactionToUpdate: null,
+  // For animation on add and update
+  justAddedUpdatedTransaction: null,
+};
+
 function reducer(state, action) {
   switch (action.type) {
+    case "openAddTransactionForm":
+      return {
+        ...state,
+        showForm: true,
+        typeToAdd: action.payload,
+      };
+    case "openUpdateTransactionForm":
+      return {
+        ...state,
+        showForm: true,
+        transactionToUpdate: action.payload,
+      };
+    case "cancelForm":
+      return {
+        ...state,
+        showForm: false,
+        typeToAdd: "",
+        transactionToUpdate: null,
+      };
     case "addTransaction":
-      return [...state, action.payload];
-    case "deleteTransaction":
+      return {
+        ...state,
+        showForm: false,
+        typeToAdd: "",
+        transactions: [...state.transactions, action.payload],
+        justAddedUpdatedTransaction: {
+          id: action.payload.id,
+          status: "added",
+        },
+      };
+    case "updateTransaction": {
+      const updatedTransaction = action.payload;
+      const filteredTransactions = state.transactions.map((transaction) => {
+        if (transaction.id === updatedTransaction.id) {
+          return updatedTransaction;
+        }
+        return transaction;
+      });
+      return {
+        ...state,
+        transactions: filteredTransactions,
+        showForm: false,
+        transactionToUpdate: null,
+        justAddedUpdatedTransaction: {
+          id: updatedTransaction.id,
+          status: "updated",
+        },
+      };
+    }
+    case "finishedAddingUpdatingAnimation":
+      return { ...state, justAddedUpdatedTransaction: null };
+    case "deleteTransaction": {
       // eslint-disable-next-line no-case-declarations
-      const filteredTransactions = state.filter(
+      const filteredTransactions = state.transactions.filter(
         (transaction) => transaction.id !== action.payload
       );
-      return filteredTransactions;
+      return { ...state, transactions: filteredTransactions };
+    }
+    default:
+      return state;
   }
 }
 
@@ -43,39 +104,85 @@ const StyledApp = styled.div`
   ${respond.tabPort(css`
     max-width: 100%;
   `)}
+
+  .type-header {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    margin-top: 5rem;
+  }
 `;
 
 function App() {
-  const [transactions, dispatch] = useReducer(reducer, []);
-  const [showForm, setShowForm] = useState(false);
+  const [state, dispatch] = useReducer(reducer, initState);
+  const visibleIncomeTransactions = (function () {
+    // Filter income transactions
+    return state.transactions.filter((transaction) => transaction.amount > 0);
+  })();
+  const visibleExpenseTransactions = (function () {
+    // Filter expense transactions
+    return state.transactions.filter((transaction) => transaction.amount < 0);
+  })();
+
   return (
     <>
       <GlobalStyles />
-      <TransactionsContext.Provider value={{ transactions, dispatch }}>
+      <TransactionsContext.Provider
+        value={{
+          state,
+          dispatch,
+          visibleIncomeTransactions,
+          visibleExpenseTransactions,
+        }}
+      >
         <Container>
           <StyledApp>
-            <Button
-              variation="success"
-              onClick={() => setShowForm(true)}
-              radius="rounded"
-            >
-              Add
-            </Button>
-            {showForm && (
-              <Modal>
-                <Form onClose={() => setShowForm(false)} />
-              </Modal>
-            )}
-            <Stats transactions={transactions} />
-            <List />
+            <Stats />
+            <div className="type-header">
+              <h3>Income</h3>
+              <Button
+                variation="success"
+                onClick={() =>
+                  dispatch({
+                    type: "openAddTransactionForm",
+                    payload: "income",
+                  })
+                }
+                radius="rounded"
+              >
+                Add Income
+              </Button>
+            </div>
+            <List transactions={visibleIncomeTransactions} />
+            <div className="type-header">
+              <h3>Expenses</h3>
+              <Button
+                variation="success"
+                onClick={() =>
+                  dispatch({
+                    type: "openAddTransactionForm",
+                    payload: "expense",
+                  })
+                }
+                radius="rounded"
+              >
+                Add Expense
+              </Button>
+            </div>
+            <List transactions={visibleExpenseTransactions} />
           </StyledApp>
+          {state.showForm && (
+            <Modal>
+              <Form onClose={() => dispatch({ type: "cancelForm" })} />
+            </Modal>
+          )}
         </Container>
       </TransactionsContext.Provider>
     </>
   );
 }
 
-export function useTransactions() {
+export function useMyState() {
   const value = useContext(TransactionsContext);
   return value;
 }
