@@ -4,9 +4,11 @@ import List from "./List";
 import Modal from "./Modal";
 import Stats from "./Stats";
 import GlobalStyles from "./styles/GlobalStyles";
-import { createContext, useContext, useReducer } from "react";
+import { createContext, useContext, useMemo, useReducer } from "react";
 import { Button } from "./ui/Button";
 import { respond } from "./styles/mixins";
+import Select from "./ui/Select";
+import { categoriesForExpense, categoriesForIncome } from "./categoriesOptions";
 
 const TransactionsContext = createContext();
 
@@ -17,6 +19,9 @@ const initState = {
   transactionToUpdate: null,
   // For animation on add and update
   justAddedUpdatedTransaction: null,
+  // filters
+  incomeFilters: { category: [] }, // {category: ['salary'], date: ...}
+  expenseFilters: { category: [] },
 };
 
 function reducer(state, action) {
@@ -79,6 +84,16 @@ function reducer(state, action) {
       );
       return { ...state, transactions: filteredTransactions };
     }
+    case "addIncomeFilter":
+      return {
+        ...state,
+        incomeFilters: { ...state.incomeFilters, ...action.payload },
+      };
+    case "addExpenseFilter":
+      return {
+        ...state,
+        expenseFilters: { ...state.expenseFilters, ...action.payload },
+      };
     default:
       return state;
   }
@@ -110,19 +125,54 @@ const StyledApp = styled.div`
     align-items: center;
     gap: 2rem;
     margin-top: 5rem;
+
+    ${respond.phone(css`
+      flex-direction: column;
+      align-items: flex-start;
+    `)}
+
+    select {
+      margin-left: auto;
+
+      ${respond.phone(css`
+        margin-left: 0;
+      `)};
+
+      option {
+        padding: 5px;
+      }
+    }
   }
 `;
 
 function App() {
   const [state, dispatch] = useReducer(reducer, initState);
-  const visibleIncomeTransactions = (function () {
+  const visibleIncomeTransactions = useMemo(() => {
     // Filter income transactions
-    return state.transactions.filter((transaction) => transaction.amount > 0);
-  })();
-  const visibleExpenseTransactions = (function () {
+    if (state.incomeFilters.category.length === 0) {
+      // All income transactions
+      return state.transactions.filter((transaction) => transaction.amount > 0);
+    } else {
+      return state.transactions.filter(
+        (transaction) =>
+          transaction.amount > 0 &&
+          state.incomeFilters.category.includes(transaction.category)
+      );
+    }
+  }, [state.transactions, state.incomeFilters]);
+  const visibleExpenseTransactions = useMemo(() => {
     // Filter expense transactions
-    return state.transactions.filter((transaction) => transaction.amount < 0);
-  })();
+    if (state.expenseFilters.category.length === 0) {
+      // All expense transactions
+      return state.transactions.filter((transaction) => transaction.amount < 0);
+    } else {
+      return state.transactions.filter(
+        (transaction) =>
+          transaction.amount < 0 &&
+          state.expenseFilters.category.includes(transaction.category)
+      );
+    }
+  }, [state.transactions, state.expenseFilters]);
 
   return (
     <>
@@ -152,6 +202,19 @@ function App() {
               >
                 Add Income
               </Button>
+              {state.transactions.length > 0 && (
+                <Select
+                  name="category"
+                  options={categoriesForIncome}
+                  isMultiple={true}
+                  onOptionSelect={(values) =>
+                    dispatch({
+                      type: "addIncomeFilter",
+                      payload: { category: values },
+                    })
+                  }
+                />
+              )}
             </div>
             <List transactions={visibleIncomeTransactions} />
             <div className="type-header">
@@ -168,6 +231,20 @@ function App() {
               >
                 Add Expense
               </Button>
+              {/* Category Filter */}
+              {state.transactions.length > 0 && (
+                <Select
+                  name="category"
+                  options={categoriesForExpense}
+                  isMultiple={true}
+                  onOptionSelect={(values) =>
+                    dispatch({
+                      type: "addExpenseFilter",
+                      payload: { category: values },
+                    })
+                  }
+                />
+              )}
             </div>
             <List transactions={visibleExpenseTransactions} />
           </StyledApp>

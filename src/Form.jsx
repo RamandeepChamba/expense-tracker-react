@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useMyState } from "./App";
 import { v4 as uuidv4 } from "uuid";
 import { respond } from "./styles/mixins";
+import { categoriesForExpense, categoriesForIncome } from "./categoriesOptions";
 
 const Container = styled.div`
   background-color: var(--color-light-3);
@@ -50,9 +51,6 @@ const Container = styled.div`
     width: 100%;
   }
 `;
-
-const categoriesForIncome = ["Salary", "Savings"];
-const categoriesForExpense = ["Gas", "Food", "Transportation"];
 
 // If there is transactionToUpdate, we are updating
 function Form({ onClose }) {

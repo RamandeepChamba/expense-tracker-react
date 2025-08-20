@@ -18,28 +18,26 @@ const Container = styled.div`
 `;
 
 function Stats() {
-  const { state } = useMyState();
-  const { transactions } = state;
-  const totalIncome = transactions.reduce((acc, curr) => {
-    return acc + (curr.amount > 0 ? curr.amount : 0);
-  }, 0);
-  const totalExpense = Math.abs(
-    transactions.reduce((acc, curr) => {
-      return acc + (curr.amount < 0 ? curr.amount : 0);
-    }, 0)
-  );
-  const netIncome = transactions.reduce((acc, curr) => {
+  const { visibleIncomeTransactions, visibleExpenseTransactions } =
+    useMyState();
+  const totalVisibleIncome = visibleIncomeTransactions.reduce((acc, curr) => {
     return acc + curr.amount;
   }, 0);
+  const totalVisibleExpense = Math.abs(
+    visibleExpenseTransactions.reduce((acc, curr) => {
+      return acc + curr.amount;
+    }, 0)
+  );
+  const netIncome = totalVisibleIncome - totalVisibleExpense;
   return (
     <Container>
       <div>
         <h2>Total Income</h2>
-        <span>Rs. {totalIncome}</span>
+        <span>Rs. {totalVisibleIncome}</span>
       </div>
       <div>
         <h2>Total Expense</h2>
-        <span>Rs. {totalExpense}</span>
+        <span>Rs. {totalVisibleExpense}</span>
       </div>
       <div>
         <h2>Net Income</h2>
